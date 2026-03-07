@@ -19,7 +19,7 @@ impl PasswordEncryptor {
         let n_bits = n.bits() as usize;
         // chunk_size = 2 * (n的十六进制位数 - 1)
         // 每个十六进制字符 = 4 bits, 每2个字节 = 1个digit
-        let chunk_size = 2 * ((n_bits + 7) / 8 - 1);
+        let chunk_size = 2 * (n_bits.div_ceil(8) - 1);
 
         Ok(Self { e, n, chunk_size })
     }
@@ -33,7 +33,7 @@ impl PasswordEncryptor {
         let mut bytes: Vec<u8> = reversed.bytes().collect();
 
         // 3. 零填充到chunk_size的倍数
-        while bytes.len() % self.chunk_size != 0 {
+        while !bytes.len().is_multiple_of(self.chunk_size) {
             bytes.push(0);
         }
 

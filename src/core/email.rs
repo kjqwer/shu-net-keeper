@@ -51,7 +51,7 @@ fn send_email_with_config(
     // 465端口使用隐式SSL，587端口使用STARTTLS
     let mailer = if smtp.port == 465 {
         debug!("使用 SSL 连接（端口 465）");
-        SmtpTransport::relay(&server)
+        SmtpTransport::relay(server)
             .map_err(|e| {
                 error!("连接 SMTP 服务器失败 {}: {}", server, e);
                 EmailError::SmtpConnectionFailed(format!("{}:{}", server, smtp.port))
@@ -61,7 +61,7 @@ fn send_email_with_config(
             .build()
     } else {
         debug!("使用 STARTTLS 连接（端口 {}）", smtp.port);
-        SmtpTransport::relay(&server)
+        SmtpTransport::relay(server)
             .map_err(|e| {
                 error!("连接 SMTP 服务器失败 {}: {}", server, e);
                 EmailError::SmtpConnectionFailed(format!("{}:{}", server, smtp.port))

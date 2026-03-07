@@ -70,19 +70,19 @@ pub enum NetworkError {
 #[derive(Error, Debug)]
 pub enum LoginError {
     #[error("获取登录参数失败: {0}")]
-    QueryStringFailed(String),
+    QueryString(String),
 
     #[error("登录请求失败: {0}")]
-    RequestFailed(String),
+    Request(String),
 
     #[error("登录响应解析失败: {0}")]
-    ResponseParseFailed(String),
+    ResponseParse(String),
 
     #[error("登录失败 [{status}]: {message}")]
-    AuthenticationFailed { status: u16, message: String },
+    Authentication { status: u16, message: String },
 
     #[error("URL 解析失败: {0}")]
-    UrlParseFailed(String),
+    UrlParse(String),
 }
 
 /// 邮件错误类型
@@ -167,7 +167,7 @@ impl From<String> for AppError {
         } else if err.contains("网络") || err.contains("连接") || err.contains("network") {
             AppError::Network(NetworkError::RequestFailed(err))
         } else if err.contains("登录") || err.contains("login") {
-            AppError::Login(LoginError::RequestFailed(err))
+            AppError::Login(LoginError::Request(err))
         } else if err.contains("邮件") || err.contains("email") || err.contains("smtp") {
             AppError::Email(EmailError::SendFailed(err))
         } else {

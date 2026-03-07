@@ -34,13 +34,13 @@ pub fn network_login(username: &str, password: &str) -> LoginResult<()> {
     // 使用 RSA 加密密码
     let encryptor = PasswordEncryptor::new().map_err(|e| {
         error!("创建密码加密器失败: {}", e);
-        LoginError::RequestFailed(e.to_string())
+        LoginError::Request(e.to_string())
     })?;
     let encrypted_password = encryptor
         .encrypt_password(&password_with_mac)
         .map_err(|e| {
             error!("密码加密失败: {}", e);
-            LoginError::RequestFailed(e.to_string())
+            LoginError::Request(e.to_string())
         })?;
     debug!("密码加密成功");
 
@@ -73,7 +73,7 @@ pub fn network_login(username: &str, password: &str) -> LoginResult<()> {
         .send_form(form_data)
         .map_err(|e| {
             error!("登录请求失败: {}", e);
-            LoginError::RequestFailed(e.to_string())
+            LoginError::Request(e.to_string())
         })?;
 
     let status = response.status();
@@ -81,7 +81,7 @@ pub fn network_login(username: &str, password: &str) -> LoginResult<()> {
 
     let body = response.into_string().map_err(|e| {
         error!("读取响应内容失败: {}", e);
-        LoginError::ResponseParseFailed(e.to_string())
+        LoginError::ResponseParse(e.to_string())
     })?;
 
     debug!("登录响应内容: {}", body);
@@ -89,7 +89,7 @@ pub fn network_login(username: &str, password: &str) -> LoginResult<()> {
     // 解析 JSON 响应
     let login_response: LoginResponse = serde_json::from_str(&body).map_err(|e| {
         error!("解析登录响应失败: {}", e);
-        LoginError::ResponseParseFailed(e.to_string())
+        LoginError::ResponseParse(e.to_string())
     })?;
 
     // 根据 result 字段判断登录是否成功
@@ -102,7 +102,7 @@ pub fn network_login(username: &str, password: &str) -> LoginResult<()> {
             .message
             .unwrap_or_else(|| "未知错误".to_string());
         error!("✗ 登录失败: {}", error_message);
-        Err(LoginError::AuthenticationFailed {
+        Err(LoginError::Authentication {
             status,
             message: error_message,
         })
@@ -116,7 +116,7 @@ fn get_login_query_string_with_agent(agent: &ureq::Agent) -> LoginResult<String>
     debug!("访问校园网关 {}，跟随重定向...", CAMPUS_GATEWAY);
     let response = agent.get(CAMPUS_GATEWAY).call().map_err(|e| {
         error!("访问校园网关失败: {}", e);
-        LoginError::QueryStringFailed(e.to_string())
+        LoginError::QueryString(e.to_string())
     })?;
 
     // 2. 获取最终URL（跟随所有重定向后的URL）
@@ -127,7 +127,7 @@ fn get_login_query_string_with_agent(agent: &ureq::Agent) -> LoginResult<String>
     debug!("读取 HTML 响应...");
     let html = response.into_string().map_err(|e| {
         error!("读取响应失败: {}", e);
-        LoginError::QueryStringFailed(e.to_string())
+        LoginError::QueryString(e.to_string())
     })?;
 
     // 4. 从HTML中提取JavaScript重定向的URL
@@ -148,26 +148,24 @@ fn extract_url_from_script(html: &str) -> LoginResult<String> {
 
     let re = Regex::new(r"location\.href='([^']+)'").map_err(|e| {
         error!("正则表达式创建失败: {}", e);
-        LoginError::UrlParseFailed(e.to_string())
+        LoginError::UrlParse(e.to_string())
     })?;
 
-    if let Some(caps) = re.captures(html) {
-        if let Some(url) = caps.get(1) {
-            debug!("成功从 HTML 中提取登录页 URL");
-            return Ok(url.as_str().to_string());
-        }
+    if let Some(caps) = re.captures(html) && let Some(url) = caps.get(1) {
+        debug!("成功从 HTML 中提取登录页 URL");
+        return Ok(url.as_str().to_string());
     }
 
     // 如果没有找到JavaScript重定向，检查是否已经在登录成功页面
     if html.contains("success") || html.contains("成功") {
         warn!("HTML 中包含成功标识，可能已经登录");
-        return Err(LoginError::QueryStringFailed(
+        return Err(LoginError::QueryString(
             "页面显示已登录或成功".to_string(),
         ));
     }
 
     warn!("未在 HTML 中找到登录页 URL");
-    Err(LoginError::UrlParseFailed("未找到登录页 URL".to_string()))
+    Err(LoginError::UrlParse("未找到登录页 URL".to_string()))
 }
 
 /// 从 URL 中提取 query string（? 后面的部分）
@@ -175,19 +173,17 @@ fn extract_query_string(url: &str) -> LoginResult<String> {
     url.split('?')
         .nth(1) // 获取 ? 后面的部分
         .map(|s| s.to_string())
-        .ok_or_else(|| LoginError::UrlParseFailed("URL 中没有查询参数".to_string()))
+        .ok_or_else(|| LoginError::UrlParse("URL 中没有查询参数".to_string()))
 }
 
 /// 从 queryString 中提取 mac 字段
 fn extract_mac_from_query_string(query_string: &str) -> LoginResult<String> {
     for pair in query_string.split('&') {
-        if let Some((key, value)) = pair.split_once('=') {
-            if key == "mac" {
-                return Ok(value.to_string());
-            }
+        if let Some((key, value)) = pair.split_once('=') && key == "mac" {
+            return Ok(value.to_string());
         }
     }
-    Err(LoginError::UrlParseFailed(
+    Err(LoginError::UrlParse(
         "queryString 中没有 mac 字段".to_string(),
     ))
 }

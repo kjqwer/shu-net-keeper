@@ -30,7 +30,7 @@ fn query_online_info() -> NetworkResult<OnlineUserInfo> {
     let status = response.status();
     debug!("收到响应，状态码: {}", status);
 
-    if !(status >= 200 && status < 300) {
+    if !(200..300).contains(&status) {
         error!("获取在线用户信息失败，状态码: {}", status);
         return Err(NetworkError::ResponseError {
             status,
