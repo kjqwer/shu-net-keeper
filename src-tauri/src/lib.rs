@@ -45,9 +45,7 @@ pub struct AppState {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 fn now_str() -> String {
-    chrono::Local::now()
-        .format("%Y-%m-%d %H:%M:%S")
-        .to_string()
+    chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string()
 }
 
 fn add_log(logs: &Arc<Mutex<Vec<String>>>, app_handle: &AppHandle, msg: &str) {
@@ -70,9 +68,7 @@ fn emit_status(app_handle: &AppHandle, status: &Arc<Mutex<DaemonStatus>>) {
 }
 
 fn load_config_from_store(app_handle: &AppHandle) -> Result<APPConfig, String> {
-    let store = app_handle
-        .store(STORE_FILE)
-        .map_err(|e| e.to_string())?;
+    let store = app_handle.store(STORE_FILE).map_err(|e| e.to_string())?;
     let value = store
         .get(CONFIG_KEY)
         .ok_or_else(|| "尚未保存配置，请先在「配置」页填写并保存".to_string())?;
@@ -125,8 +121,7 @@ fn daemon_loop(
                             .ok()
                             .flatten()
                             .unwrap_or_else(|| "未知".to_string());
-                        let ip_changed =
-                            matches!(&last_ip, Some(old) if old != &current_ip);
+                        let ip_changed = matches!(&last_ip, Some(old) if old != &current_ip);
 
                         add_log(
                             &logs,
@@ -142,11 +137,9 @@ fn daemon_loop(
                                 ip_changed,
                             ) {
                                 Ok(()) => add_log(&logs, &app_handle, "✓ 邮件通知已发送"),
-                                Err(e) => add_log(
-                                    &logs,
-                                    &app_handle,
-                                    &format!("✗ 邮件发送失败: {}", e),
-                                ),
+                                Err(e) => {
+                                    add_log(&logs, &app_handle, &format!("✗ 邮件发送失败: {}", e))
+                                }
                             }
                         }
 
@@ -211,13 +204,10 @@ fn daemon_loop(
 
 #[tauri::command]
 fn get_config(app_handle: AppHandle) -> Result<Option<APPConfig>, String> {
-    let store = app_handle
-        .store(STORE_FILE)
-        .map_err(|e| e.to_string())?;
+    let store = app_handle.store(STORE_FILE).map_err(|e| e.to_string())?;
     match store.get(CONFIG_KEY) {
         Some(v) => {
-            let cfg: APPConfig =
-                serde_json::from_value(v).map_err(|e| e.to_string())?;
+            let cfg: APPConfig = serde_json::from_value(v).map_err(|e| e.to_string())?;
             Ok(Some(cfg))
         }
         None => Ok(None),
@@ -226,9 +216,7 @@ fn get_config(app_handle: AppHandle) -> Result<Option<APPConfig>, String> {
 
 #[tauri::command]
 fn save_config(config: APPConfig, app_handle: AppHandle) -> Result<(), String> {
-    let store = app_handle
-        .store(STORE_FILE)
-        .map_err(|e| e.to_string())?;
+    let store = app_handle.store(STORE_FILE).map_err(|e| e.to_string())?;
     let value = serde_json::to_value(&config).map_err(|e| e.to_string())?;
     store.set(CONFIG_KEY, value);
     store.save().map_err(|e| e.to_string())?;
@@ -236,10 +224,7 @@ fn save_config(config: APPConfig, app_handle: AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn start_daemon(
-    state: State<'_, AppState>,
-    app_handle: AppHandle,
-) -> Result<(), String> {
+fn start_daemon(state: State<'_, AppState>, app_handle: AppHandle) -> Result<(), String> {
     if state.daemon_running.load(Ordering::SeqCst) {
         return Err("守护进程已在运行".to_string());
     }
@@ -298,7 +283,10 @@ fn set_autostart(app_handle: AppHandle, enabled: bool) -> Result<(), String> {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, None))
+        .plugin(tauri_plugin_autostart::init(
+            MacosLauncher::LaunchAgent,
+            None,
+        ))
         .plugin(tauri_plugin_store::Builder::new().build())
         .setup(|app| {
             app.manage(AppState {
@@ -308,10 +296,8 @@ pub fn run() {
             });
 
             // ── System tray ───────────────────────────────────────────────
-            let show_item =
-                MenuItem::with_id(app, "show", "显示窗口", true, None::<&str>)?;
-            let quit_item =
-                MenuItem::with_id(app, "quit", "退出", true, None::<&str>)?;
+            let show_item = MenuItem::with_id(app, "show", "显示窗口", true, None::<&str>)?;
+            let quit_item = MenuItem::with_id(app, "quit", "退出", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show_item, &quit_item])?;
 
             let icon = app

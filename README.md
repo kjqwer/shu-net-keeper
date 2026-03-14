@@ -28,8 +28,54 @@
 - 📝 **详细日志** - 完整的日志记录系统，支持文件输出和按日期归档
 - 🚀 **低资源占用** - Rust 编写，内存占用少，性能高效
 - 🐳 **容器化部署** - 提供 Docker 支持，跨平台部署
+- 🪟 **图形界面** - 提供 Tauri GUI 客户端，支持系统托盘和开机自启
 
-## 快速开始
+## GUI 客户端
+
+SHU Net Keeper 提供图形界面客户端（基于 Tauri），无需手动编辑配置文件，适合桌面用户日常使用。
+
+### 界面预览
+
+| 主界面 |
+|--------|
+| ![主界面截图](docs/ScreenShot.png) |
+
+### 下载安装
+
+前往 [GitHub Releases](https://github.com/beiningwu/shu-net-keeper/releases) 下载对应平台的 GUI 安装包：
+
+| 平台 | 文件名 |
+|------|--------|
+| macOS (Apple Silicon) | `SHU.Net.Keeper_aarch64.dmg` |
+| macOS (Intel) | `SHU.Net.Keeper_x86_64.dmg` |
+| Windows | `SHU.Net.Keeper_x86_64-setup.msi` |
+
+> ⚠️ **macOS 权限注意**：首次运行可能提示无法验证开发者，请在「系统设置 → 隐私与安全性」中点击「仍要打开」，或执行：
+> ```bash
+> xattr -r -d com.apple.quarantine /Applications/SHU\ Net\ Keeper.app
+> ```
+
+### 功能说明
+
+- **配置管理**：在左侧面板填写学号、密码和检查间隔，可选填 SMTP 邮件通知信息，点击「保存」即可。配置自动存储在系统应用数据目录，无需手动维护配置文件。
+- **守护控制**：点击「▶ 启动守护」开始监控网络；点击「⏹ 停止守护」停止。当前连接状态（IP 地址、登录次数、IP 变更次数）实时显示在状态区域。
+- **实时日志**：右侧日志面板实时滚动展示守护程序的运行记录，支持一键清空。
+- **系统托盘**：关闭窗口后程序最小化到系统托盘，右键托盘图标可显示窗口或退出程序。
+- **开机自启**：在状态面板底部勾选「开机自启动」，程序将随系统启动自动运行（macOS 使用 LaunchAgent，Windows 使用注册表）。
+
+### 配置文件位置
+
+GUI 版本将配置存储在平台应用数据目录（与 CLI 的 `config.toml` 相互独立）：
+
+| 平台 | 路径 |
+|------|------|
+| macOS | `~/Library/Application Support/com.shu-net-keeper/` |
+| Windows | `%APPDATA%\com.shu-net-keeper\` |
+| Linux | `~/.local/share/com.shu-net-keeper/` |
+
+---
+
+## 快速开始（CLI）
 
 ### 下载程序
 
@@ -44,8 +90,8 @@
 username = "your_student_id"
 password = "your_password"
 
-# 可选：检查间隔（秒），默认 30 秒
-interval = 30
+# 可选：检查间隔（秒），默认 10 秒
+interval = 10
 
 # 可选：是否启用 SMTP 邮件通知
 smtp_enabled = false
@@ -65,7 +111,7 @@ receiver = "recipient@example.com" # 收件人邮箱
 |--------|------|------|--------|------|
 | `username` | String | 是 | - | 校园网账号（学号） |
 | `password` | String | 是 | - | 校园网密码 |
-| `interval` | Integer | 否 | 30 | 网络状态检查间隔（秒） |
+| `interval` | Integer | 否 | 10 | 网络状态检查间隔（秒） |
 | `smtp_enabled` | Boolean | 否 | false | 是否启用邮件通知 |
 
 ### SMTP 配置项说明
@@ -84,14 +130,14 @@ receiver = "recipient@example.com" # 收件人邮箱
 ```toml
 username = "12345678"
 password = "mypassword123"
-interval = 60
+interval = 10
 ```
 
 **完整配置（包含邮件通知）**：
 ```toml
 username = "20221234567"
 password = "mypassword123"
-interval = 30
+interval = 10
 smtp_enabled = true
 
 [smtp]
@@ -315,28 +361,6 @@ docker stop shu-net-keeper
 docker restart shu-net-keeper
 ```
 
-## 从源码构建
-
-### 前置要求
-
-- Rust 1.70 或更高版本
-- Cargo（Rust 包管理器）
-
-### 编译步骤
-
-```bash
-# 克隆仓库
-git clone https://github.com/yourusername/shu-net-keeper.git
-cd shu-net-keeper
-
-# 编译 Release 版本
-cargo build --release
-
-# 可执行文件位于
-# Linux/macOS: ./target/release/shu-net-keeper
-# Windows: .\target\release\shu-net-keeper.exe
-```
-
 ## 故障排查
 
 ### 问题一：程序无法启动
@@ -387,4 +411,59 @@ cargo build --release
 
 ## 贡献
 
-欢迎提交 Issue 和 Pull Request！
+欢迎所有形式的贡献！无论是报告 Bug、提出功能建议，还是直接提交代码，都非常感谢。
+
+### 报告问题 / 提出建议
+
+请前往 [GitHub Issues](https://github.com/beiningwu/shu-net-keeper/issues) 提交，并尽量包含以下信息：
+
+- 操作系统和版本
+- 使用的是 CLI 版本还是 GUI 版本
+- 问题的复现步骤
+- 相关日志输出（CLI：`logs/` 目录；GUI：日志面板内容）
+
+### 提交代码
+
+1. **Fork** 本仓库并 clone 到本地
+2. 基于 `main` 创建功能分支：`git checkout -b feat/your-feature`
+3. 编写代码，确保通过以下检查：
+   ```bash
+   cargo clippy -- -D warnings   # 无 clippy 警告
+   cargo fmt --all -- --check    # 格式符合规范
+   cargo test                    # 所有测试通过
+   ```
+4. 提交 commit，建议使用语义化提交信息（如 `feat:`, `fix:`, `refactor:`）
+5. 推送分支并发起 **Pull Request**，说明改动内容和动机
+
+### 从源码构建
+
+**前置要求**：Rust 1.70+，Cargo
+
+```bash
+# 克隆仓库
+git clone https://github.com/beiningwu/shu-net-keeper.git
+cd shu-net-keeper
+
+# 构建 CLI Release 版本
+cargo build --release
+# 可执行文件：Linux/macOS → target/release/shu-net-keeper
+#              Windows   → target\release\shu-net-keeper.exe
+
+# 构建 GUI（需要先安装 Tauri CLI）
+cargo install tauri-cli --version "^2"
+cargo tauri build
+# 安装包输出至 src-tauri/target/release/bundle/
+```
+
+### 开发模式
+
+```bash
+# CLI 开发 & 测试
+cargo build
+cargo test
+
+# GUI 开发预览
+cargo tauri dev
+```
+
+详细架构说明请参阅 [CLAUDE.md](CLAUDE.md)（面向开发者的项目指引）。

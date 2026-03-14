@@ -28,7 +28,7 @@ mod tests {
         let config = APPConfig {
             username: "12345678".to_string(),
             password: "testpass".to_string(),
-            interval: 600,
+            interval: 10,
             smtp_enabled: true,
             smtp: Some(smtp),
         };
@@ -49,7 +49,7 @@ mod tests {
         let config = APPConfig {
             username: "12345678".to_string(),
             password: "testpass".to_string(),
-            interval: 600,
+            interval: 10,
             smtp_enabled: true,
             smtp: Some(smtp),
         };
@@ -70,7 +70,7 @@ mod tests {
         let config = APPConfig {
             username: "12345678".to_string(),
             password: "testpass".to_string(),
-            interval: 600,
+            interval: 10,
             smtp_enabled: true,
             smtp: Some(smtp),
         };
@@ -91,7 +91,7 @@ mod tests {
         let config = APPConfig {
             username: "12345678".to_string(),
             password: "testpass".to_string(),
-            interval: 600,
+            interval: 10,
             smtp_enabled: true,
             smtp: Some(smtp),
         };
@@ -106,7 +106,7 @@ mod tests {
         let config = APPConfig {
             username: "12345678".to_string(),
             password: "testpass".to_string(),
-            interval: 600,
+            interval: 10,
             smtp_enabled: false,
             smtp: None,
         };
@@ -121,7 +121,7 @@ mod tests {
         let config = APPConfig {
             username: "12345678".to_string(),
             password: "testpass".to_string(),
-            interval: 600,
+            interval: 10,
             smtp_enabled: true,
             smtp: Some(SmtpConfig {
                 server: Some("smtp.qq.com".to_string()),
@@ -146,7 +146,7 @@ mod tests {
         let config = APPConfig {
             username: "12345678".to_string(),
             password: "testpass".to_string(),
-            interval: 600,
+            interval: 10,
             smtp_enabled: true, // 启用了
             smtp: None,         // 但没配置
         };
@@ -159,7 +159,7 @@ mod tests {
         let config = APPConfig {
             username: "123".to_string(), // 不是8位
             password: "testpass".to_string(),
-            interval: 600,
+            interval: 10,
             smtp_enabled: false,
             smtp: None,
         };
@@ -172,7 +172,7 @@ mod tests {
         let config = APPConfig {
             username: "1234567a".to_string(), // 包含字母
             password: "testpass".to_string(),
-            interval: 600,
+            interval: 10,
             smtp_enabled: false,
             smtp: None,
         };
@@ -185,7 +185,7 @@ mod tests {
         let config = APPConfig {
             username: "12345678".to_string(),
             password: "".to_string(), // 空密码
-            interval: 600,
+            interval: 10,
             smtp_enabled: false,
             smtp: None,
         };
