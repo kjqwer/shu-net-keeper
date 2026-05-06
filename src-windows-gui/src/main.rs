@@ -4,8 +4,8 @@ use iced::time;
 use iced::widget::{Space, button, column, container, row, scrollable, text, text_input, toggler};
 use iced::widget::{button as button_style, container as container_style};
 use iced::{
-    Alignment, Background, Border, Color, Element, Font, Length, Shadow, Size, Subscription, Task,
-    Theme, window,
+    Alignment, Background, Border, Color, Element, Font, Length, Size, Subscription, Task, Theme,
+    window,
 };
 use muda::{Menu, MenuEvent, MenuItem};
 use shu_net_keeper::config::{APPConfig, APPConfigValidated, SmtpConfig, validate_config};
@@ -79,7 +79,6 @@ enum Message {
     SaveConfig,
     StartDaemon,
     StopDaemon,
-    MinimizeWindow,
     AutostartChanged(bool),
     AutoScrollChanged(bool),
     ClearLogs,
@@ -87,6 +86,7 @@ enum Message {
     WindowCloseRequested(window::Id),
     ShowWindow,
     ExitApp,
+    OpenGitHub,
 }
 
 struct WindowsGuiApp {
@@ -254,9 +254,6 @@ impl WindowsGuiApp {
                 self.stop_daemon();
                 Task::none()
             }
-            Message::MinimizeWindow => {
-                window::get_latest().and_then(|id| window::minimize(id, true))
-            }
             Message::AutostartChanged(enabled) => {
                 self.autostart_enabled = enabled;
                 if let Err(err) = set_autostart_enabled(enabled) {
@@ -301,6 +298,10 @@ impl WindowsGuiApp {
                 self.daemon_running.store(false, Ordering::SeqCst);
                 iced::exit()
             }
+            Message::OpenGitHub => {
+                let _ = open::that("https://github.com/BeiningWu/shu-net-keeper");
+                Task::none()
+            }
         }
     }
 
@@ -334,12 +335,16 @@ impl WindowsGuiApp {
     }
 
     fn left_panel(&self) -> Element<'_, Message> {
-        let mut content =
-            column![self.config_card(), self.status_card(), self.footer_card(),].spacing(14);
+        let mut content = column![].spacing(14);
 
         if let Some(banner) = &self.banner {
             content = content.push(self.banner_card(banner));
         }
+
+        content = content
+            .push(self.config_card())
+            .push(self.status_card())
+            .push(self.footer_card());
 
         container(scrollable(content).width(Length::Fill))
             .width(Length::Fixed(LEFT_PANEL_WIDTH))
@@ -496,16 +501,27 @@ impl WindowsGuiApp {
                 ));
         }
 
-        container(
-            form.push(
+        let action_row = if self.status.running {
+            row![button("保存配置")
+                .on_press(Message::SaveConfig)
+                .style(button_style::primary)]
+            .spacing(10)
+        } else {
+            row![
                 button("保存配置")
                     .on_press(Message::SaveConfig)
-                    .style(button_style::primary),
-            ),
-        )
-        .padding(18)
-        .style(card_style)
-        .into()
+                    .style(button_style::secondary),
+                button("保存并启动")
+                    .on_press(Message::StartDaemon)
+                    .style(button_style::success),
+            ]
+            .spacing(10)
+        };
+
+        container(form.push(action_row))
+            .padding(18)
+            .style(card_style)
+            .into()
     }
 
     fn status_card(&self) -> Element<'_, Message> {
@@ -531,12 +547,12 @@ impl WindowsGuiApp {
         let mut content = column![
             section_header("状态"),
             row![
-                container(Space::with_width(Length::Fixed(14.0)))
-                    .width(Length::Fixed(14.0))
-                    .height(Length::Fixed(14.0))
+                container(Space::with_width(Length::Fixed(12.0)))
+                    .width(Length::Fixed(12.0))
+                    .height(Length::Fixed(12.0))
                     .style(move |_| dot_style(conn_color)),
                 column![
-                    text(conn_label).size(18),
+                    text(conn_label).size(16),
                     text(format!("IP: {ip_label}"))
                         .size(12)
                         .color(color_text_sub())
@@ -544,33 +560,26 @@ impl WindowsGuiApp {
                 .spacing(2)
             ]
             .align_y(Alignment::Center)
-            .spacing(12),
+            .spacing(10),
             row![
                 metric_card("登录次数", self.status.login_count.to_string()),
                 metric_card("上次检查", last_check.to_string()),
             ]
             .spacing(10),
-            info_line("最近错误", self.status.last_error.as_deref().unwrap_or("—"),),
-            row![
-                if self.status.running {
-                    button("停止守护")
-                        .on_press(Message::StopDaemon)
-                        .style(button_style::danger)
-                } else {
-                    button("启动守护")
-                        .on_press(Message::StartDaemon)
-                        .style(button_style::success)
-                },
-                button("最小化到任务栏")
-                    .on_press(Message::MinimizeWindow)
-                    .style(button_style::secondary),
-            ]
-            .spacing(10),
+            if self.status.running {
+                button("停止守护")
+                    .on_press(Message::StopDaemon)
+                    .style(button_style::danger)
+            } else {
+                button("启动守护")
+                    .on_press(Message::StartDaemon)
+                    .style(button_style::success)
+            },
             toggler(self.autostart_enabled)
-                .label("开机自启（最小化启动）")
+                .label("开机自启动")
                 .on_toggle(Message::AutostartChanged)
         ]
-        .spacing(14);
+        .spacing(12);
 
         if let Some(last_error) = &self.status.last_error {
             content = content.push(
@@ -593,9 +602,9 @@ impl WindowsGuiApp {
                 text("本软件开源免费，严禁商业销售")
                     .size(12)
                     .color(color_text_sub()),
-                text("GitHub: BeiningWu/shu-net-keeper")
-                    .size(11)
-                    .color(color_text_sub()),
+                button("GitHub: BeiningWu/shu-net-keeper")
+                    .on_press(Message::OpenGitHub)
+                    .style(button_style::text),
             ]
             .spacing(4),
         )
@@ -827,15 +836,6 @@ fn metric_card<'a>(label: &'a str, value: String) -> Element<'a, Message> {
     .padding(12)
     .width(Length::Fill)
     .style(metric_style)
-    .into()
-}
-
-fn info_line<'a>(label: &'a str, value: &'a str) -> Element<'a, Message> {
-    column![
-        text(label).size(11).color(color_text_sub()),
-        text(value).size(13)
-    ]
-    .spacing(4)
     .into()
 }
 
@@ -1090,10 +1090,9 @@ fn header_style(_: &Theme) -> container_style::Style {
         text_color: Some(color_text()),
         border: Border {
             radius: 0.0.into(),
-            width: 0.0,
-            color: Color::TRANSPARENT,
+            width: 1.0,
+            color: color_border(),
         },
-        shadow: Shadow::default(),
         ..Default::default()
     }
 }
@@ -1276,6 +1275,50 @@ fn load_icon_from_ico(ico_data: &[u8]) -> tray_icon::Icon {
     }
 }
 
+fn load_window_icon() -> window::Icon {
+    let ico_data = include_bytes!("../../src-tauri/icons/icon.ico");
+    let count = u16::from_le_bytes([ico_data[4], ico_data[5]]) as usize;
+    let mut best_idx = 0;
+    let mut best_size: u32 = 0;
+    for i in 0..count {
+        let offset = 6 + i * 16;
+        let w = if ico_data[offset] == 0 { 256u32 } else { ico_data[offset] as u32 };
+        let h = if ico_data[offset + 1] == 0 { 256u32 } else { ico_data[offset + 1] as u32 };
+        let size = w * h;
+        if size > best_size {
+            best_size = size;
+            best_idx = i;
+        }
+    }
+    let entry_offset = 6 + best_idx * 16;
+    let img_size = u32::from_le_bytes([
+        ico_data[entry_offset + 8],
+        ico_data[entry_offset + 9],
+        ico_data[entry_offset + 10],
+        ico_data[entry_offset + 11],
+    ]) as usize;
+    let img_offset = u32::from_le_bytes([
+        ico_data[entry_offset + 12],
+        ico_data[entry_offset + 13],
+        ico_data[entry_offset + 14],
+        ico_data[entry_offset + 15],
+    ]) as usize;
+    let img_data = &ico_data[img_offset..img_offset + img_size];
+
+    if img_data.len() > 8 && img_data[0..4] == [0x89, 0x50, 0x4E, 0x47] {
+        let decoder = png::Decoder::new(img_data);
+        let mut reader = decoder.read_info().expect("failed to read PNG info");
+        let mut buf = vec![0u8; reader.output_buffer_size()];
+        let info = reader.next_frame(&mut buf).expect("failed to decode PNG frame");
+        let rgba = &buf[..info.buffer_size()];
+        window::icon::from_rgba(rgba.to_vec(), info.width, info.height)
+            .expect("failed to create window icon")
+    } else {
+        window::icon::from_rgba(vec![0x40, 0x80, 0xC0, 0xFF].repeat(16 * 16), 16, 16)
+            .expect("failed to create fallback window icon")
+    }
+}
+
 fn main() -> iced::Result {
     let start_hidden = std::env::args().any(|arg| arg == "--minimized");
 
@@ -1292,6 +1335,7 @@ fn main() -> iced::Result {
         min_size: Some(Size::new(920.0, 640.0)),
         visible: true,
         exit_on_close_request: false,
+        icon: Some(load_window_icon()),
         ..Default::default()
     })
     .run_with(move || WindowsGuiApp::new(start_hidden))
